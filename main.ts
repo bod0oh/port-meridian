@@ -1,16 +1,13 @@
-// PORT MERIDIAN — Open World Crime. A working gta6-01 entry (Node 22, standard library
-// only): the game is this directory's game/ folder, plain static files a desktop browser
-// loads offline (game/index.html and its ES modules, no library and no network request),
-// and the program hands it in. It copies game/ and screenshots/ from beside this file
-// to /output and writes /output/dossier.json, the summary the judge reads, with the
-// vendored make.fun library. The game itself is an original top-down open-world crime
-// game: a 120x120-tile city, driving, traffic, pedestrians, a wanted level with police,
-// six story missions, combat, an economy, a HUD with a minimap, and a save system.
+// Port Meridian (Node 22, standard library only): an original top-down 2D open-world crime game
+// featuring a 5-zone city, driving, traffic, wanted level and police, 6 story missions, side activities,
+// combat, HUD with minimap, day/night cycle, procedural audio, and localStorage save. Packages game/
+// and screenshots/ into /output along with dossier.json generated via the vendored make.fun library.
+//
 // Serve it locally with `node serve.ts`, then open http://localhost:8080.
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-game.ts';
@@ -18,9 +15,9 @@ import { buildDossier } from './vendor/makefun-game.ts';
 const here = fileURLToPath(new URL('.', import.meta.url));
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
-// Port Meridian check: refuse to hand in an entry whose game entry point is missing.
-if (!existsSync(join(here, 'game', 'index.html'))) {
-  throw new Error('game/index.html is missing: the entry has no playable game');
+const indexPath = join(here, 'game', 'index.html');
+if (!existsSync(indexPath) || !readFileSync(indexPath, 'utf8').includes('js/main.js')) {
+  throw new Error('Validation failed: game/index.html is missing or does not contain js/main.js');
 }
 
 mkdirSync(out, { recursive: true });
@@ -28,10 +25,6 @@ cpSync(join(here, 'game'), join(out, 'game'), { recursive: true });
 mkdirSync(join(out, 'screenshots'), { recursive: true });
 if (existsSync(join(here, 'screenshots'))) cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
 
-// The scorer's own caps (reference/gate.json): only text_max_bytes shapes the bytes; the others refuse an entry the
-// scorer would refuse (more than 4 screenshots or one over 256 KiB; more than 993 files in game/ or 48 MiB of game
-// files, in all, or a path under game/ over 1000 bytes: game/ counts beside /output's own 1000-entry cap, its
-// screenshots/ and dossier.json).
 writeFileSync(
   join(out, 'dossier.json'),
   buildDossier(out, {
